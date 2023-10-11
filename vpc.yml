@@ -1,0 +1,155 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: AWS CloudFormation Template for VPC Creation
+
+Resources:
+  MyVPC:         # VPC for EC2
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: '10.0.0.0/16'
+
+  MypublicSubnet: # Defining subnet for EC2
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: '10.0.0.0/24'
+      AvailabilityZone: 'ap-south-1a'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: Mypublicsubnet
+
+  MyInternetGateway:  # Internet access for public
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: Mygateway
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref MyVPC
+      InternetGatewayId: !Ref MyInternetGateway
+
+  Mypublicsecgroup: # Public security group 
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+        GroupDescription: Enable SSH access via port 22 for public subnet
+        VpcId: !Ref MyVPC
+        SecurityGroupIngress:
+            - IpProtocol: tcp
+              FromPort: '22'
+              ToPort: '22'
+              CidrIp: 0.0.0.0/0
+
+  MyPublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MyVPC
+      Tags:
+        - Key: Name
+          Value: mypublicroutetable
+    
+  MyPublicRoute: # public route table with internet gateway attached
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref MyPublicRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref MyInternetGateway
+
+  MyPublicRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref MypublicSubnet
+      RouteTableId: !Ref MyPublicRouteTable
+
+
+  MyPrivateSubnet: # Defining private subnet
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: '10.0.1.0/24'
+      AvailabilityZone: 'ap-south-1a'
+      Tags:
+        - Key: Name
+          Value: MyPrivateSubnet
+
+  Myprivatesecgroup: 
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+        GroupDescription: Enable SSH access via port 22 for private subnet
+        VpcId: !Ref MyVPC
+        SecurityGroupIngress:
+            - IpProtocol: tcp
+              FromPort: '22'
+              ToPort: '22'
+              CidrIp: 10.0.0.0/24
+
+
+  MyPrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MyVPC
+      Tags:
+        - Key: Name
+          Value: myprivateroutetable
+    
+  MyNatGatewayEIP:  # defining nat gateway for private access
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+
+  MyNatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt MyNatGatewayEIP.AllocationId
+      SubnetId: !Ref MypublicSubnet
+  
+  MyPrivateRoute:
+    DependsOn: MyNatGateway
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref MyPrivateRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref MyNatGateway
+
+  MyPrivateRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref MyPrivateSubnet
+      RouteTableId: !Ref MyPrivateRouteTable
+
+#defining outputs for exporting values to stack
+Outputs:
+  VpcId:
+    Value: !Ref MyVPC
+    Export:
+      Name: "VPC"
+
+  PublicSubnetId:
+    Value: !Ref MypublicSubnet
+    Export:
+      Name: "publicsubnet"
+
+  PublicSecurityGroupId:
+    Value: !Ref Mypublicsecgroup
+    Export:
+      Name: "publicsecurity"
+
+  PrivateSubnetId:
+    Value: !Ref MyPrivateSubnet
+    Export:
+      Name: "privatesubnet"
+
+  PrivateSecurityGroupId:
+    Value: !Ref Myprivatesecgroup
+    Export:
+      Name: "privatesecurity"
+  
+  
+
+ 
+
+  
+
+  

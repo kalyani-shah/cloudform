@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CloudFormation Template for Application Load Balancer
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC where the ALB will be deployed
+    Type: String
+    Default: "!ImportValue VPC"
+
+Resources:
+
+  Mypublicsubnet01: # Defining subnet for LB as LB requires 2 subnets in different AZ
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !ImportValue VPC
+      CidrBlock: '10.0.3.0/24'
+      AvailabilityZone: 'ap-south-1b'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: Mypublicsubnet01
+
+  MyLoadBalancer:
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    Properties:
+      Name: MyLoadBalancer
+      Subnets:
+        - !ImportValue publicsubnet
+        - !Ref Mypublicsubnet01  # Add more subnet IDs if your VPC spans multiple Availability Zones
+      
+      SecurityGroups:
+        - !ImportValue publicsecurity  # Specify the security group ID for the ALB
+      Scheme: internet-facing  # Use 'internal' for internal load balancer
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: '60'  # Specify idle timeout in seconds
+      Tags:
+        - Key: Name
+          Value: MyLoadBalancer
+
+  MyTargetGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      Name: MyTargetGroup
+      Port: 80  # Specify the target port
+      Protocol: HTTP  # Use 'HTTPS' for SSL/TLS, 'TCP' for TCP, or 'UDP' for UDP
+      VpcId: !ImportValue VPC
+      HealthCheckIntervalSeconds: 30  # Specify health check interval in seconds
+      HealthCheckPath: /  # Specify the health check path
+      HealthCheckProtocol: HTTP  # Use 'HTTPS' for SSL/TLS or 'TCP' for TCP
+      HealthCheckTimeoutSeconds: 5  # Specify health check timeout in seconds
+      HealthyThresholdCount: 2  # Specify number of consecutive successful health checks
+      UnhealthyThresholdCount: 2  # Specify number of consecutive unsuccessful health checks
+
+  MyListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      DefaultActions:
+        - Type: fixed-response
+          FixedResponseConfig:
+            StatusCode: 200
+            ContentType: text/plain
+            
+      LoadBalancerArn: !Ref MyLoadBalancer
+      Port: 80  # Specify the listener port
+      Protocol: HTTP  # Use 'HTTPS' for SSL/TLS, 'TCP' for TCP, or 'UDP' for UDP SslPolicy: ELBSecurityPolicy-2016-08  # Specify SSL policy if using HTTPS
+      
+Outputs:
+  LoadBalancerDNSName:
+    Description: DNS name of the created load balancer
+    Value: !GetAtt MyLoadBalancer.DNSName

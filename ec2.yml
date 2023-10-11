@@ -1,0 +1,117 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: AWS CloudFormation Template for Instance Creation
+
+
+Parameters:
+
+  AMIChoice: #ec2 ami ID [linux/windows/ubuntu]
+    Description: Choose AMI ID
+    Type: String
+    Default: "ami-03d294e37a4820c21"
+
+  InstanceType: #ec2 instance type [t2.micro/t2.small/t3.small]
+    Description: Choose the EC2 instance type
+    Type: String
+    Default: "t2.micro"
+
+  VolumeType: #ec2 volume type [gp2/gp3/io1]
+    Description: Choose EBS volume type
+    Type: String
+    Default: "gp2" 
+
+  VolumeSize: #allocation of  ebs volume to ec2 
+    Description: Specify the size of the EBS volume (in GB)
+    Type: Number
+    Default: 10
+
+  DeleteOnTermination: #deleting ebs volume on termination of ec2
+    Description: Specify whether the EBS volume should be removed on instance termination
+    Type: String
+    Default: "true"
+
+
+Resources:
+
+  MyEBSVolume:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: 'ap-south-1a'
+      Size: !Ref VolumeSize
+      VolumeType: !Ref VolumeType
+     
+  MyVolumeAttachment: #volume attachment to instance
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      InstanceId: !Ref EC2Instance
+      VolumeId: !Ref MyEBSVolume
+      Device: /dev/xvdf 
+
+  EC2InstanceProfile: #role defined to connect ec2 via SSM
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: ec2_profile
+      Roles:
+        - Ref: EC2Role
+
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ec2_role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: ec2.amazonaws.com
+
+  EC2RolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: ec2_policy
+      Roles:
+        - Ref: EC2Role
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action:
+              - "ssm:UpdateInstanceInformation"
+              - "ssmmessages:CreateControlChannel"
+              - "ssmmessages:CreateDataChannel"
+              - "ssmmessages:OpenControlChannel"
+              - "ssmmessages:OpenDataChannel"
+            Effect: "Allow"
+            Resource: "*"
+
+  EC2RoleAssumePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: ec2_assume_policy
+      Roles:
+        - Ref: EC2Role
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action: "sts:AssumeRole"
+            Effect: "Allow"
+            Resource: "*"
+
+  
+  EC2Instance:  #EC2 instance definition
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AMIChoice
+      InstanceType: !Ref InstanceType
+      SubnetId: !ImportValue publicsubnet
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      SecurityGroupIds: 
+        - !ImportValue publicsecurity
+      Tags:
+        - Key: Name
+          Value: "Hello Linux"
+
+Outputs:
+  EC2InstanceId:
+    Value: !Ref EC2Instance
+    Export:
+      Name: "EC2Instance"

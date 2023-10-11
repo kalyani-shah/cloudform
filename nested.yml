@@ -1,0 +1,33 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CloudFormation Template for Nested Stacks
+
+Resources:
+      
+  VPCStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://aws-s3-bucket1111.s3.ap-south-1.amazonaws.com/vpc.yml
+
+  EC2Stack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - VPCStack
+    Properties:
+      TemplateURL: https://aws-s3-bucket1111.s3.ap-south-1.amazonaws.com/ec2.yml
+
+
+  RDSStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - EC2Stack    # EC2Stack is a dependency for RDSStack
+    Properties:
+      TemplateURL: https://aws-s3-bucket1111.s3.ap-south-1.amazonaws.com/rds.yml
+
+  
+  LoadBalancerStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - EC2Stack  
+    Properties:
+        TemplateURL: https://aws-s3-bucket1111.s3.ap-south-1.amazonaws.com/lb.yml
+ 

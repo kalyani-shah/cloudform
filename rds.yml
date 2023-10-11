@@ -1,0 +1,96 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: AWS CloudFormation Template for RDS Creation
+
+Parameters:
+  DBInstanceID:
+    Description: Prod database instance
+    Type: String
+    Default: proddb
+
+  DBName:
+    Description: Prod database
+    Type: String
+    Default: prds
+
+  DBInstanceClass:
+    Description: Type of instance class
+    Type: String
+    Default: db.t2.small
+
+  DBAllocatedStorage:
+    Description: Storage for db
+    Type: Number
+    Default: 20
+
+  DBUsername:
+    Description: Username for db access
+    Type: String
+    Default: admin
+
+  DBPassword:
+    Description: Password for db access
+    Type: String
+    Default: password
+
+  Engine:
+    Description: Database engine to be used for RDS
+    Type: String
+    Default: MySQL
+
+  EngineVersion:
+    Description: Version of engine to be used for RDS
+    Type: String
+    Default: 8.0.33
+
+Resources:
+  MyPrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !ImportValue VPC
+      CidrBlock: '10.0.2.0/24'
+      AvailabilityZone: 'ap-south-1b'
+      Tags:
+        - Key: Name
+          Value: MyPrivateSubnet2
+
+  MyDBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupName: mydbsubnetgroup
+      DBSubnetGroupDescription: A DB subnet group for RDS instance.
+      SubnetIds:
+        - !ImportValue privatesubnet
+        - !Ref MyPrivateSubnet2
+
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow instance to connect to RDS
+      VpcId: !ImportValue VPC
+
+  InstanceSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt InstanceSecurityGroup.GroupId
+      IpProtocol: tcp
+      FromPort: '3306'
+      ToPort: '3306'
+      CidrIp: '10.0.0.0/24'
+
+  ProdDB:
+    Type: 'AWS::RDS::DBInstance'
+    Properties:
+      DBInstanceIdentifier: !Ref DBInstanceID
+      DBName: !Ref DBName
+      AllocatedStorage: !Ref DBAllocatedStorage
+      DBInstanceClass: !Ref DBInstanceClass
+      Engine: !Ref Engine
+      EngineVersion: !Ref EngineVersion
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      VPCSecurityGroups:
+        - !GetAtt InstanceSecurityGroup.GroupId
+      DBSubnetGroupName: !Ref MyDBSubnetGroup
+
+
+  
