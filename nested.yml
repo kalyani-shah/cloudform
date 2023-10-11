@@ -6,14 +6,14 @@ Resources:
   VPCStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://github.com/kalyani-shah/cloudform/blob/main/vpc.yml
+      TemplateURL: https://raw.githubusercontent.com/kalyani-shah/cloudform/main/vpc.yml
 
   EC2Stack:
     Type: AWS::CloudFormation::Stack
     DependsOn:
       - VPCStack
     Properties:
-      TemplateURL: https://github.com/kalyani-shah/cloudform/blob/main/ec2.yml
+      TemplateURL: https://raw.githubusercontent.com/kalyani-shah/cloudform/main/ec2.yml
 
 
   RDSStack:
@@ -21,7 +21,7 @@ Resources:
     DependsOn:
       - EC2Stack    # EC2Stack is a dependency for RDSStack
     Properties:
-      TemplateURL: https://github.com/kalyani-shah/cloudform/blob/main/rds.yml
+      TemplateURL: https://raw.githubusercontent.com/kalyani-shah/cloudform/main/rds.yml
 
   
   LoadBalancerStack:
@@ -29,7 +29,7 @@ Resources:
     DependsOn:
       - EC2Stack  
     Properties:
-        TemplateURL: https://github.com/kalyani-shah/cloudform/blob/main/lb.yml
+        TemplateURL: https://raw.githubusercontent.com/kalyani-shah/cloudform/main/lb.yml
  
 
  
